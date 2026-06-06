@@ -1,0 +1,6 @@
+{
+  "name": "AI Math Scanner Step Solver",
+  "description": "High-fidelity AI-powered step-by-step math, physics, chemistry, and science solver from sketches, images, or typed inputs.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

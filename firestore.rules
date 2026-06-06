@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isOwner(userId) && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Profile Validation Blueprints
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'plan', 'updatedAt']) &&
+        (data.keys().size() == 5 || (data.keys().size() == 6 && data.keys().hasAll(['schoolId']) && data.schoolId is string && data.schoolId.size() <= 100)) &&
+        data.uid == request.auth.uid &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.email is string && data.email.size() <= 100 &&
+        data.plan is string && (data.plan == 'explorer' || data.plan == 'pro' || data.plan == 'enterprise');
+    }
+
+    // Solved History Item Validation Blueprints
+    function isValidHistoryItem(data) {
+      return data.keys().hasAll(['id', 'timestamp', 'input', 'inputType', 'subject', 'classLevel', 'language', 'solution']) &&
+        data.keys().size() == 8 &&
+        data.id is string && data.id.size() <= 128 &&
+        data.input is string && data.input.size() <= 10000 &&
+        data.inputType is string && (data.inputType == 'scan' || data.inputType == 'type') &&
+        data.subject is string && data.subject.size() <= 100 &&
+        data.classLevel is string && data.classLevel.size() <= 100 &&
+        data.language is string && data.language.size() <= 100 &&
+        data.solution is map &&
+        data.solution.keys().hasAll(['identifiedProblem', 'quickAnswer', 'steps']) &&
+        data.solution.identifiedProblem is string && data.solution.identifiedProblem.size() <= 10000 &&
+        data.solution.quickAnswer is string && data.solution.quickAnswer.size() <= 10000 &&
+        data.solution.steps is list;
+    }
+
+    // Path Rules Gating
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isVerifiedOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().updatedAt == request.time &&
+                      incoming().uid == existing().uid && incoming().email == existing().email;
+    }
+
+    match /users/{userId}/history/{historyId} {
+      allow get, list: if isOwner(userId) && isValidId(userId);
+      allow create: if isVerifiedOwner(userId) && isValidId(userId) && isValidId(historyId) && 
+                      isValidHistoryItem(incoming()) && incoming().timestamp == request.time &&
+                      exists(/databases/$(database)/documents/users/$(userId));
+      allow update: if isVerifiedOwner(userId) && isValidId(userId) && isValidId(historyId) && 
+                      isValidHistoryItem(incoming()) && incoming().timestamp == request.time &&
+                      incoming().id == existing().id;
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(historyId);
+    }
+  }
+}

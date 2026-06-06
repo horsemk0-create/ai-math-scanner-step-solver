@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Represents a student or academic scholar profile.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "User's firebase authentication UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "The student's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email registered via Firebase Auth."
+        },
+        "schoolId": {
+          "type": "string",
+          "description": "Optional school/university register identity."
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["explorer", "pro", "enterprise"],
+          "description": "Active licensing tier of the solver."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated epoch timestamp."
+        }
+      },
+      "required": ["uid", "name", "email", "plan", "updatedAt"]
+    },
+    "SolvedHistoryItem": {
+      "title": "Solved History Item",
+      "description": "A solved formula or handwriting recognition snapshot record.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique history snapshot identity."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Standard timestamp of execution."
+        },
+        "input": {
+          "type": "string",
+          "description": "Formula pattern or typed characters input."
+        },
+        "inputType": {
+          "type": "string",
+          "enum": ["scan", "type"],
+          "description": "Input format used for execution."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Classified subject category."
+        },
+        "classLevel": {
+          "type": "string",
+          "description": "Difficulty scope tier."
+        },
+        "language": {
+          "type": "string",
+          "description": "Selected natural language prompt guide."
+        },
+        "solution": {
+          "type": "object",
+          "description": "Computed steps and final answer output."
+        }
+      },
+      "required": ["id", "timestamp", "input", "inputType", "subject", "classLevel", "language", "solution"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Profile details for subscribed users."
+    },
+    "/users/{userId}/history/{historyId}": {
+      "schema": "SolvedHistoryItem",
+      "description": "Historical math questions processed for this user."
+    }
+  }
+}
